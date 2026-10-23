@@ -21,7 +21,7 @@
     "valueOnRevert": "1"
   },
   {
-    "settingType": "GLOBAL",
+    "settingType": "SECURE",
     "label": "Hide Accessibility Services",
     "key": "accessibility_enabled",
     "valueOnLaunch": "0",

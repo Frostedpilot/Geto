@@ -17,8 +17,10 @@
  */
 package com.android.geto.framework.securesettings
 
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Context
 import android.provider.Settings
+import android.view.accessibility.AccessibilityManager
 import androidx.core.database.getLongOrNull
 import androidx.core.database.getStringOrNull
 import com.android.geto.domain.common.dispatcher.Dispatcher
@@ -31,7 +33,9 @@ import com.android.geto.domain.model.SettingType.SECURE
 import com.android.geto.domain.model.SettingType.SYSTEM
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 internal class DefaultSecureSettingsWrapper @Inject constructor(
@@ -40,6 +44,9 @@ internal class DefaultSecureSettingsWrapper @Inject constructor(
 ) : SecureSettingsWrapper {
 
     private val contentResolver = context.contentResolver
+
+    private val accessibilityManager =
+        context.getSystemService(AccessibilityManager::class.java)
 
     private val settingsProjection: Array<String> = arrayOf(
         Settings.NameValueTable._ID,
@@ -71,6 +78,20 @@ internal class DefaultSecureSettingsWrapper @Inject constructor(
                 value,
             )
         }
+    }
+
+    override suspend fun awaitAccessibilityServicesCleared(timeoutMillis: Long): Boolean = withContext(ioDispatcher) {
+        withTimeoutOrNull(timeoutMillis) {
+            while (true) {
+                val enabledServices = accessibilityManager.getEnabledAccessibilityServiceList(
+                    AccessibilityServiceInfo.FEEDBACK_ALL_MASK,
+                )
+
+                if (enabledServices.isEmpty()) break
+
+                delay(100L)
+            }
+        } != null
     }
 
     override suspend fun getSecureSettings(settingType: SettingType): List<SecureSetting> = withContext(ioDispatcher) {

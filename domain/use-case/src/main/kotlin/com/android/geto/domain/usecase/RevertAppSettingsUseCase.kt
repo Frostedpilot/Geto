@@ -37,10 +37,12 @@ class RevertAppSettingsUseCase @Inject constructor(
 
         if (appSettings.isEmpty()) return@withContext AppSettingsResult.EmptyAppSettings
 
-        if (appSettings.all { !it.enabled }) return@withContext AppSettingsResult.DisabledAppSettings
+        val enabledAppSettings = appSettings.filter { it.enabled }
+
+        if (enabledAppSettings.isEmpty()) return@withContext AppSettingsResult.DisabledAppSettings
 
         try {
-            if (appSettings.all {
+            if (enabledAppSettings.all {
                     secureSettingsWrapper.canWriteSecureSettings(
                         settingType = it.settingType,
                         key = it.key,

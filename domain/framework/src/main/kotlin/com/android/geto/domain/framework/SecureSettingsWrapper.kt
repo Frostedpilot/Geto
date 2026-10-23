@@ -28,4 +28,16 @@ interface SecureSettingsWrapper {
     ): Boolean
 
     suspend fun getSecureSettings(settingType: SettingType): List<SecureSetting>
+
+    /**
+     * Waits until Android has finished unbinding enabled accessibility services.
+     *
+     * Writing `Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES` only updates the underlying
+     * setting synchronously. The AccessibilityManagerService that owns
+     * the actual service bindings processes the change asynchronously, so apps that check
+     * AccessibilityManager right after the write can still see the old services.
+     *
+     * @return true when no accessibility services remain enabled, false if [timeoutMillis] elapsed first.
+     */
+    suspend fun awaitAccessibilityServicesCleared(timeoutMillis: Long = 5_000L): Boolean
 }

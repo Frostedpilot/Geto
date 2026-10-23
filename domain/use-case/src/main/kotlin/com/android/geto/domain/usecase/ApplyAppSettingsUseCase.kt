@@ -21,6 +21,7 @@ import com.android.geto.domain.common.dispatcher.Dispatcher
 import com.android.geto.domain.common.dispatcher.GetoDispatchers
 import com.android.geto.domain.framework.SecureSettingsWrapper
 import com.android.geto.domain.model.AppSettingsResult
+import com.android.geto.domain.model.SettingType
 import com.android.geto.domain.repository.AppSettingsRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -37,10 +38,12 @@ class ApplyAppSettingsUseCase @Inject constructor(
 
         if (appSettings.isEmpty()) return@withContext AppSettingsResult.EmptyAppSettings
 
-        if (appSettings.all { !it.enabled }) return@withContext AppSettingsResult.DisabledAppSettings
+        val enabledAppSettings = appSettings.filter { it.enabled }
+
+        if (enabledAppSettings.isEmpty()) return@withContext AppSettingsResult.DisabledAppSettings
 
         try {
-            if (appSettings.all {
+            if (enabledAppSettings.all {
                     secureSettingsWrapper.canWriteSecureSettings(
                         settingType = it.settingType,
                         key = it.key,
@@ -48,6 +51,13 @@ class ApplyAppSettingsUseCase @Inject constructor(
                     )
                 }
             ) {
+                if (enabledAppSettings.any {
+                        it.settingType == SettingType.SECURE && it.key in ACCESSIBILITY_SETTING_KEYS
+                    }
+                ) {
+                    secureSettingsWrapper.awaitAccessibilityServicesCleared()
+                }
+
                 AppSettingsResult.Success
             } else {
                 AppSettingsResult.Failure
@@ -57,5 +67,12 @@ class ApplyAppSettingsUseCase @Inject constructor(
         } catch (_: IllegalArgumentException) {
             AppSettingsResult.InvalidValues
         }
+    }
+
+    private companion object {
+        val ACCESSIBILITY_SETTING_KEYS = setOf(
+            "accessibility_enabled",
+            "enabled_accessibility_services",
+        )
     }
 }
